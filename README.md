@@ -1,5 +1,7 @@
 # shedskin — KEEP YOUR TAIL
 
+### ▶ [Play it in your browser](https://jbjoker7.github.io/shedskin/)
+
 A 2D vertical platformer about a gecko escaping a lizard farm where tails are
 harvested. Climb any wall. Dodge the machines. Reach the sky. **Lose your tail
 and you lose the level.**
@@ -8,6 +10,11 @@ Built with Phaser 3 + Vite. Every sprite, tile, and sound is generated in code
 at boot — the repo contains zero binary assets.
 
 ## Play
+
+No install needed — **<https://jbjoker7.github.io/shedskin/>**. Every push to
+`main` rebuilds and redeploys it.
+
+To run it locally:
 
 ```bash
 npm install
