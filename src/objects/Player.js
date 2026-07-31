@@ -44,6 +44,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.restickUntil = now;       // same-side re-stick lockout
     this.restickSide = null;
     this.jumpCutArmed = false;     // variable-height cut only applies to real jumps
+    this.bufferFromSpace = false;  // was the buffered jump a Space press?
 
     this.peekHeld = 0;             // ms Down held while standing (camera scout peek)
 
@@ -73,20 +74,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return { x: this.x - this.facing * 8, y: this.y + 6 };
   }
 
-  // Is the wall beside the body on `side` a real grabbable tile? Blocks
-  // barbed (noCling) walls, and world-bounds "walls" where there is no tile.
-  wallNoCling(side) {
+  // The tile beside the body on `side`, or null (world edge / open air).
+  wallTile(side) {
     const px = side === 'left' ? this.body.left - 2 : this.body.right + 2;
-    const t = this.layer.getTileAtWorldXY(px, this.body.center.y);
-    if (!t || !t.collides) return true; // nothing solid there (e.g. world edge)
-    return !!t.properties.noCling;
+    return this.layer.getTileAtWorldXY(px, this.body.center.y);
+  }
+
+  // Barbed wall — grabbing it is refused and an existing grip lets go.
+  // Deliberately separate from "no tile here": a missing tile while climbing
+  // means the wall ENDED, which is a mantle, not a detach.
+  wallBarbed(side) {
+    return !!this.wallTile(side)?.properties?.noCling;
   }
 
   canCling(side, now) {
     if (!this.held(side)) return false; // must be pressing INTO the wall
     if (this.restickSide === side && now < this.restickUntil) return false;
-    if (this.wallNoCling(side)) return false;
-    return true;
+    const t = this.wallTile(side);
+    if (!t || !t.collides) return false; // world bounds are not climbable
+    return !t.properties.noCling;
   }
 
   enterCling(side, now) {
@@ -101,10 +107,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene.events.emit('player-cling', this);
     sfx.play('cling');
     this.squash(0.85, 1.1);
-    // Buffered jump converts to an instant wall-jump on contact.
-    if (now < this.bufferUntil) {
+    // A buffered SPACE converts to an instant wall-jump on contact (that's the
+    // chain-climbing tech). A buffered W/Up must not: pressing up while
+    // steering into a wall is climb intent, so it just starts the climb.
+    if (now < this.bufferUntil && this.bufferFromSpace) {
       this.bufferUntil = -Infinity;
       this.wallJump(now);
+    } else {
+      this.bufferUntil = -Infinity;
     }
   }
 
@@ -169,12 +179,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const dir = (right ? 1 : 0) - (left ? 1 : 0);
     const clinging = this.pstate === PSTATE.CLING_LEFT || this.pstate === PSTATE.CLING_RIGHT;
 
-    // Jump buffering: Space always; Up/W only when not on a wall (there they climb).
+    // Read every jump key's edge flags EVERY frame. Phaser latches JustDown/
+    // JustUp until something reads them, so a skipped read (short-circuit or a
+    // guarded branch) leaks a stale press into a later frame and eats a jump.
+    const spacePressed = this.pressed('space');
     const upPressed = this.pressed('up');
-    if (this.pressed('space') || (upPressed && !clinging)) this.bufferUntil = now + T.BUFFER_MS;
+    const spaceReleased = this.released('space');
+    const upReleased = this.released('up');
+
+    // Jump buffering: Space always; Up/W only when not on a wall (there it climbs).
+    if (spacePressed || (upPressed && !clinging)) {
+      this.bufferUntil = now + T.BUFFER_MS;
+      this.bufferFromSpace = spacePressed;
+    }
 
     // Variable jump cut — only while an actual jump is in flight.
-    if (this.jumpCutArmed && (this.released('space') || this.released('up'))
+    if (this.jumpCutArmed && (spaceReleased || upReleased)
         && b.velocity.y < T.JUMP_CUT_MIN_VY) {
       b.setVelocityY(b.velocity.y * T.JUMP_CUT);
       this.jumpCutArmed = false;
@@ -301,8 +321,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
           this.exitClingToAir(now); // wall coyote window still allows a late wall-jump
           break;
         }
-        // climbing into a barbed (noCling) stretch detaches — never silently holds
-        if (this.wallNoCling(side)) {
+        // climbing into a barbed stretch detaches — never silently holds
+        if (this.wallBarbed(side)) {
           this.exitClingToAir(now);
           break;
         }

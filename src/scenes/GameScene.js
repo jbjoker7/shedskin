@@ -137,14 +137,18 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // UI overlay scene
-    if (!this.scene.isActive('UI')) this.scene.launch('UI');
-    this.game.events.emit('level-start', {
+    // UI overlay scene. scene.launch only QUEUES the start, so UIScene.create
+    // (which subscribes to these events) runs after this method returns —
+    // stash the info in the registry too, and UIScene picks it up on create.
+    const levelInfo = {
       index: this.levelIndex,
       name: levelDef.name,
       subtitle: levelDef.subtitle ?? '',
       worldHeight: parsed.worldHeight,
-    });
+    };
+    this.registry.set('levelInfo', levelInfo);
+    if (!this.scene.isActive('UI')) this.scene.launch('UI');
+    else this.game.events.emit('level-start', levelInfo);
     if (!this.registry.get('runStart')) this.registry.set('runStart', Date.now());
 
     sfx.startAmbient();

@@ -90,6 +90,12 @@ export const sfx = {
     const resume = () => { if (ctx.state === 'suspended') ctx.resume(); };
     window.addEventListener('keydown', resume);
     window.addEventListener('pointerdown', resume);
+    // Mute lives on window, not a scene: scene-scoped key handlers die with the
+    // scene that registered them (Boot hands off immediately).
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'm' || e.key === 'M') this.setMuted(!muted);
+    });
+    if (import.meta.env.DEV) window.__sfx = this;
   },
   play(name) {
     if (!ctx || muted || ctx.state === 'suspended') return;

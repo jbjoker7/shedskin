@@ -120,9 +120,11 @@ export function makeNoise(scene, key, size, colors, density = 0.12) {
   const tex = scene.textures.createCanvas(key, size, size);
   const ctx = tex.getContext();
   // Deterministic hash noise — no RNG state, same every boot.
+  // `^` coerces to signed int32, so force unsigned before the modulo or half
+  // the columns hash negative and paint solid.
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const v = ((x * 73856093) ^ (y * 19349663)) % 997;
+      const v = (((x * 73856093) ^ (y * 19349663)) >>> 0) % 997;
       if (v / 997 < density) {
         ctx.fillStyle = colors[v % colors.length];
         ctx.fillRect(x, y, 1, 1);

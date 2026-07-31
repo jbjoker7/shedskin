@@ -10,6 +10,7 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.cardGroup = null;
+    this.cardTimer = null;
     this.awaitKey = null;
 
     // ---- HUD ----
@@ -62,6 +63,11 @@ export class UIScene extends Phaser.Scene {
       }
     });
 
+    // GameScene starts before this scene exists, so its first 'level-start'
+    // has no listener yet — replay it from the registry on create.
+    const pending = this.registry.get('levelInfo');
+    if (pending) this.onLevelStart(pending);
+
     g.on('level-start', this.onLevelStart);
     g.on('tail-lost', this.onTailLost);
     g.on('level-complete', this.onLevelComplete);
@@ -81,6 +87,10 @@ export class UIScene extends Phaser.Scene {
   clearCard() {
     this.cardGroup?.destroy(true);
     this.cardGroup = null;
+    // Cancel any pending auto-dismiss, or it fires later and wipes whatever
+    // card is showing by then (e.g. the PAUSED or fail card).
+    this.cardTimer?.remove();
+    this.cardTimer = null;
     if (this.awaitKey) { this.input.keyboard.off('keydown', this.awaitKey); this.awaitKey = null; }
   }
 
@@ -105,7 +115,7 @@ export class UIScene extends Phaser.Scene {
     const n = info.index === 'test' ? '?' : info.index + 1;
     this.text(GAME_W / 2, GAME_H / 2 - 30, `LEVEL ${n} — ${info.name.toUpperCase()}`, 30);
     if (info.subtitle) this.text(GAME_W / 2, GAME_H / 2 + 14, info.subtitle, 16, '#8a94a0');
-    this.time.delayedCall(1400, () => this.clearCard());
+    this.cardTimer = this.time.delayedCall(1400, () => this.clearCard());
   }
 
   showFailCard() {

@@ -48,8 +48,7 @@ export class BootScene extends Phaser.Scene {
     this.registry.set('totalFails', 0);
     this.registry.set('runStart', 0);
 
-    sfx.init();
-    this.input.keyboard.on('keydown-M', () => sfx.setMuted(!sfx.isMuted()));
+    sfx.init(); // also installs the window-level M mute toggle
 
     const params = new URLSearchParams(location.search);
     if (params.has('gfx')) return this.debugGrid();
