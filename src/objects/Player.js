@@ -1,7 +1,8 @@
 // The gecko. State machine: GROUNDED / AIRBORNE / CLING_LEFT / CLING_RIGHT /
-// TAIL_LOST. Auto-cling: touching a wall while airborne clings unless the
-// player holds the direction away from that wall (that hold is also the
-// release input while clinging).
+// TAIL_LOST. Hold-to-cling: the gecko grabs a wall only while the player holds
+// the direction INTO it; releasing that hold lets go. While clinging, Up/W
+// climbs (not jumps), Down climbs down fast, Space wall-jumps.
+// Everywhere else Space, Up, and W all jump.
 //
 // Arcade cling trick: while clinging, gravity is off and a constant micro-push
 // into the wall keeps body.blocked.<side> true so the state doesn't flicker.
@@ -41,29 +42,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.hlockUntil = now;         // horizontal input lock after wall-jump
     this.restickUntil = now;       // same-side re-stick lockout
     this.restickSide = null;
-    this.dropNoClingUntil = now;   // no-cling after pressing away to release
-    this.dropNoClingSide = null;
+    this.jumpCutArmed = false;     // variable-height cut only applies to real jumps
 
-    this.peekHeld = 0;             // ms Up has been held (for camera peek)
+    this.peekHeld = 0;             // ms Down held while standing (camera scout peek)
 
     const K = Phaser.Input.Keyboard.KeyCodes;
     const kb = scene.input.keyboard;
     this.keys = {
       left: [kb.addKey(K.LEFT), kb.addKey(K.A)],
       right: [kb.addKey(K.RIGHT), kb.addKey(K.D)],
-      up: [kb.addKey(K.UP), kb.addKey(K.W)],
+      up: [kb.addKey(K.UP), kb.addKey(K.W)],      // climb up on walls, jump elsewhere
       down: [kb.addKey(K.DOWN), kb.addKey(K.S)],
-      jump: [kb.addKey(K.SPACE)],
+      space: [kb.addKey(K.SPACE)],                 // jump / wall-jump always
     };
 
     this.frameIndex = scene.registry.get('sheets').gecko.frameIndex;
     this.setFrame(this.frameIndex.fall[0]);
   }
 
-  // --- input helpers ---
+  // --- input helpers (map-then-some so every key's JustDown flag is consumed) ---
   held(name) { return this.keys[name].some((k) => k.isDown); }
-  pressed(name) { return this.keys[name].some((k) => Phaser.Input.Keyboard.JustDown(k)); }
-  released(name) { return this.keys[name].some((k) => Phaser.Input.Keyboard.JustUp(k)); }
+  pressed(name) { return this.keys[name].map((k) => Phaser.Input.Keyboard.JustDown(k)).some(Boolean); }
+  released(name) { return this.keys[name].map((k) => Phaser.Input.Keyboard.JustUp(k)).some(Boolean); }
 
   // Tail anchor point (world coords) — where the follower tail attaches.
   tailAnchor() {
@@ -80,9 +80,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   canCling(side, now) {
-    if (this.held(side === 'left' ? 'right' : 'left')) return false; // holding away refuses
+    if (!this.held(side)) return false; // must be pressing INTO the wall
     if (this.restickSide === side && now < this.restickUntil) return false;
-    if (this.dropNoClingSide === side && now < this.dropNoClingUntil) return false;
     if (this.wallNoCling(side)) return false;
     return true;
   }
@@ -90,6 +89,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   enterCling(side, now) {
     this.pstate = side === 'left' ? PSTATE.CLING_LEFT : PSTATE.CLING_RIGHT;
     this.clingSide = side;
+    this.jumpCutArmed = false;
     this.body.setAllowGravity(false);
     this.body.setAcceleration(0, 0);
     this.body.setDrag(0, 0);
@@ -119,6 +119,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.body.setVelocityY(-T.JUMP_VEL);
     this.pstate = PSTATE.AIRBORNE;
     this.coyoteUntil = -Infinity;
+    this.jumpCutArmed = true;
     this.squash(0.85, 1.15);
     sfx.play('jump');
     this.scene.events.emit('player-jump', this);
@@ -136,6 +137,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.wallCoyoteUntil = -Infinity;
     this.pstate = PSTATE.AIRBORNE;
     this.clingSide = null;
+    this.jumpCutArmed = true;
     this.squash(1.15, 0.85);
     sfx.play('jump');
     this.scene.events.emit('player-walljump', this, side);
@@ -162,18 +164,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const left = this.held('left'), right = this.held('right');
     const up = this.held('up'), down = this.held('down');
     const dir = (right ? 1 : 0) - (left ? 1 : 0);
+    const clinging = this.pstate === PSTATE.CLING_LEFT || this.pstate === PSTATE.CLING_RIGHT;
 
-    // Jump buffering (recorded regardless of state).
-    if (this.pressed('jump')) this.bufferUntil = now + T.BUFFER_MS;
+    // Jump buffering: Space always; Up/W only when not on a wall (there they climb).
+    const upPressed = this.pressed('up');
+    if (this.pressed('space') || (upPressed && !clinging)) this.bufferUntil = now + T.BUFFER_MS;
 
-    // Variable jump cut.
-    if (this.released('jump') && b.velocity.y < T.JUMP_CUT_MIN_VY) {
+    // Variable jump cut — only while an actual jump is in flight.
+    if (this.jumpCutArmed && (this.released('space') || this.released('up'))
+        && b.velocity.y < T.JUMP_CUT_MIN_VY) {
       b.setVelocityY(b.velocity.y * T.JUMP_CUT);
+      this.jumpCutArmed = false;
     }
 
-    // Camera peek bookkeeping (GameScene reads peekHeld).
-    const idleCling = (this.pstate === PSTATE.CLING_LEFT || this.pstate === PSTATE.CLING_RIGHT) && !down;
-    if (up && (this.pstate === PSTATE.GROUNDED || idleCling)) this.peekHeld += delta;
+    // Camera scout peek: hold Down while standing still (GameScene reads peekHeld).
+    if (down && this.pstate === PSTATE.GROUNDED && Math.abs(b.velocity.x) < 10) this.peekHeld += delta;
     else this.peekHeld = 0;
 
     switch (this.pstate) {
@@ -192,19 +197,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
         b.maxVelocity.x = T.RUN_SPEED;
 
+        // climb onto an adjacent wall by pushing into it + Up (checked BEFORE
+        // the jump so W against a wall means "start climbing", not "hop")
+        if (up && dir !== 0) {
+          const side = dir === -1 ? 'left' : 'right';
+          if ((side === 'left' ? b.blocked.left : b.blocked.right) && this.canCling(side, now)) {
+            this.bufferUntil = -Infinity; // the Up press was climb intent, not a jump
+            this.enterCling(side, now);
+            break;
+          }
+        }
         // jump (incl. buffered)
         if (now < this.bufferUntil) {
           this.bufferUntil = -Infinity;
           this.groundJump();
           break;
-        }
-        // climb onto an adjacent wall by pushing into it + Up
-        if (up && dir !== 0) {
-          const side = dir === -1 ? 'left' : 'right';
-          if ((side === 'left' ? b.blocked.left : b.blocked.right) && this.canCling(side, now)) {
-            this.enterCling(side, now);
-            break;
-          }
         }
         // walked off a ledge
         if (!b.blocked.down) {
@@ -255,6 +262,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // land
         if (b.blocked.down) {
           this.pstate = PSTATE.GROUNDED;
+          this.jumpCutArmed = false;
           this.squash(1.2, 0.8);
           sfx.play('land');
           this.scene.events.emit('player-land', this);
@@ -279,18 +287,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const side = this.pstate === PSTATE.CLING_LEFT ? 'left' : 'right';
         const blockedIntoWall = side === 'left' ? b.blocked.left : b.blocked.right;
 
-        // wall-jump
+        // wall-jump (Space; or a jump buffered just before grabbing)
         if (now < this.bufferUntil) {
           this.bufferUntil = -Infinity;
           this.wallJump(now);
           break;
         }
-        // release by pressing away
-        if (this.held(side === 'left' ? 'right' : 'left')) {
-          this.exitClingToAir(now);
-          b.setVelocityX(side === 'left' ? 60 : -60);
-          this.dropNoClingSide = side;
-          this.dropNoClingUntil = now + T.DROP_NOCLING_MS;
+        // hold-to-cling: releasing the into-wall direction lets go
+        if (!this.held(side)) {
+          this.exitClingToAir(now); // wall coyote window still allows a late wall-jump
           break;
         }
         // climbing into a barbed (noCling) stretch detaches — never silently holds

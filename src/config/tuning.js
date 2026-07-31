@@ -21,7 +21,6 @@ export const TUNING = {
   WALLJUMP_VY: 300,
   WALLJUMP_HLOCK_MS: 110,  // ignore L/R accel after wall-jump
   RESTICK_LOCK_MS: 140,    // same-side wall re-cling lockout
-  DROP_NOCLING_MS: 100,    // no-cling on a side after pressing away to release
 
   COYOTE_MS: 100,          // ground AND wall
   BUFFER_MS: 120,          // jump buffer
