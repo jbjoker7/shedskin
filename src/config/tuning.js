@@ -48,4 +48,6 @@ export const TUNING = {
   KINDNESS_MULT: 1.25,
 };
 
-if (import.meta.env.DEV) window.TUNING = TUNING;
+// `?.` because this module is also imported outside the bundler (the headless
+// research harness), where import.meta.env does not exist.
+if (import.meta.env?.DEV) window.TUNING = TUNING;

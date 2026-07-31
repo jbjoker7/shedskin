@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sim:spike": "node --import ./research/harness/register.mjs research/harness/spike.mjs",
+    "sim:determinism": "node --import ./research/harness/register.mjs research/harness/check-determinism.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.3",
+    "jsdom": "^29.1.1",
     "vite": "^8.2.0"
   }
 }

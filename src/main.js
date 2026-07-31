@@ -28,4 +28,4 @@ const game = new Phaser.Game({
   scene: [BootScene, TitleScene, GameScene, UIScene],
 });
 
-if (import.meta.env.DEV) window.__game = game;
+if (import.meta.env?.DEV) window.__game = game;

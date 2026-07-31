@@ -95,7 +95,7 @@ export const sfx = {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'm' || e.key === 'M') this.setMuted(!muted);
     });
-    if (import.meta.env.DEV) window.__sfx = this;
+    if (import.meta.env?.DEV) window.__sfx = this;
   },
   play(name) {
     if (!ctx || muted || ctx.state === 'suspended') return;
