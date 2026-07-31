@@ -32,6 +32,7 @@ export class UIScene extends Phaser.Scene {
     const g = this.game.events;
     this.onLevelStart = (info) => {
       this.levelText.setText(info.name.toUpperCase());
+      this.collectorPip.setVisible(false);
       this.clearCard();
       if (this.registry.get('lastCardLevel') !== info.index) {
         this.registry.set('lastCardLevel', info.index);

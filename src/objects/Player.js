@@ -29,6 +29,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(DEPTH.PLAYER);
     this.body.setSize(10, 16).setOffset(3, 8);
     this.body.setMaxVelocity(300, T.MAX_FALL);
+    this.setCollideWorldBounds(true);
 
     this.pstate = PSTATE.AIRBORNE;
     this.facing = 1; // 1 right, -1 left (horizontal poses face right)
@@ -72,11 +73,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return { x: this.x - this.facing * 8, y: this.y + 6 };
   }
 
-  // Is the wall tile beside the body on `side` unusable (barbed)?
+  // Is the wall beside the body on `side` a real grabbable tile? Blocks
+  // barbed (noCling) walls, and world-bounds "walls" where there is no tile.
   wallNoCling(side) {
     const px = side === 'left' ? this.body.left - 2 : this.body.right + 2;
     const t = this.layer.getTileAtWorldXY(px, this.body.center.y);
-    return !!t?.properties?.noCling;
+    if (!t || !t.collides) return true; // nothing solid there (e.g. world edge)
+    return !!t.properties.noCling;
   }
 
   canCling(side, now) {
