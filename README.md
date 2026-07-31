@@ -21,13 +21,14 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-**Controls:** arrows / WASD move · SPACE, W or ↑ jump · hold toward a wall to
-grab it, then W/↑ climbs up, S/↓ slides down, SPACE wall-jumps · hold ↓ while
-standing to scout ahead · R restart · M mute
+**Controls:** arrows / WASD move · SPACE, W or ↑ jump · touch a wall to cling to
+it, then W/↑ climbs up, S/↓ slides down, SPACE leaps off · steer away from a wall
+to let go · hold ↓ while standing to scout ahead · R restart · M mute
 
-The gecko grips any wall as long as you keep pressing into it — let go of the
-direction and it drops. Chain wall-jumps up shafts by steering into each wall.
-Climbing down is faster than climbing up — use it to dodge.
+She sticks to any wall she touches and stays there with nothing held down —
+she's a gecko, that's the one thing she's good at. Letting go is the deliberate
+part: steer away to drop, or SPACE to launch off. Chain those leaps up a shaft
+to climb it fast. Climbing down is quicker than climbing up — use it to dodge.
 
 - **Level 1 — The Pens**: escape your cage the night before your "trim".
 - **Level 2 — The Harvest Floor**: where the tails go.

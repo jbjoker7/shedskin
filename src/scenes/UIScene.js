@@ -123,7 +123,7 @@ export class UIScene extends Phaser.Scene {
     this.time.delayedCall(250, () => {
       if (!this.scene.get('Game') || this.scene.get('Game').state !== 'dying') return;
       this.makeCard(0.55);
-      this.text(GAME_W / 2, GAME_H / 2 - 10, 'THEY GOT YOUR TAIL.', 32, '#e23b2e');
+      this.text(GAME_W / 2, GAME_H / 2 - 10, 'YOUR TAIL HAS BEEN HARVESTED.', 32, '#e23b2e');
     });
   }
 

@@ -16,6 +16,11 @@ export const TUNING = {
   CLIMB_UP: 90,
   CLIMB_DOWN: 135,
   CLING_PUSH: 25,          // constant micro-push into wall keeps blocked.* true
+  // How fast a caught wall kills leftover upward speed. Deliberately equal to
+  // GRAVITY_Y: a jump made against a wall then rises exactly as far as one made
+  // in the open, and she holds at the top instead of falling back. Raise it and
+  // hugging a wall quietly costs you height, which reads as the jump misfiring.
+  CLING_RISE_DRAG: 950,
 
   WALLJUMP_VX: 240,
   WALLJUMP_VY: 300,

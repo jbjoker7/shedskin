@@ -47,7 +47,7 @@ export class TitleScene extends Phaser.Scene {
     this.add.text(GAME_W / 2, 400, 'ENTER — begin the escape', {
       fontFamily: FONT, fontSize: '20px', color: '#e8ecf0',
     }).setOrigin(0.5);
-    this.add.text(GAME_W / 2, 440, 'arrows/WASD move · SPACE/W/↑ jump · hold toward a wall to climb it · protect your tail', {
+    this.add.text(GAME_W / 2, 440, 'arrows/WASD move · SPACE/W/↑ jump · touch a wall to cling, SPACE to leap off · protect your tail', {
       fontFamily: FONT, fontSize: '13px', color: '#5c6e7d',
     }).setOrigin(0.5);
     this.add.text(GAME_W / 2, 464, `press 1-${Math.min(unlocked + 1, LEVELS.length)} to jump to an unlocked level · M mute`, {

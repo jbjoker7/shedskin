@@ -1,8 +1,9 @@
 // The gecko. State machine: GROUNDED / AIRBORNE / CLING_LEFT / CLING_RIGHT /
-// TAIL_LOST. Hold-to-cling: the gecko grabs a wall only while the player holds
-// the direction INTO it; releasing that hold lets go. While clinging, Up/W
-// climbs (not jumps), Down climbs down fast, Space wall-jumps.
-// Everywhere else Space, Up, and W all jump.
+// TAIL_LOST. Sticky cling: touching a wall in mid-air grabs it, and she stays
+// there with no input at all — she is a gecko, holding on is the one thing she
+// is good at. Letting go is the deliberate act: press AWAY from the wall to
+// drop, or Space to wall-jump off it. While clinging, Up/W climbs (not jumps)
+// and Down climbs down fast. Everywhere else Space, Up, and W all jump.
 //
 // Arcade cling trick: while clinging, gravity is off and a constant micro-push
 // into the wall keeps body.blocked.<side> true so the state doesn't flicker.
@@ -97,8 +98,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return !!this.wallTile(side)?.properties?.noCling;
   }
 
+  // The direction that means "off this wall".
+  awayFrom(side) {
+    return side === 'left' ? 'right' : 'left';
+  }
+
   canCling(side, now) {
-    if (!this.held(side)) return false; // must be pressing INTO the wall
+    // No hold required — contact is enough. The only thing that refuses a grab
+    // is the brief lockout after pushing off this same wall, without which a
+    // wall-jump would re-stick to the wall it just left.
     if (this.restickSide === side && now < this.restickUntil) return false;
     const t = this.wallTile(side);
     if (!t || !t.collides) return false; // world bounds are not climbable
@@ -112,7 +120,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.body.setAllowGravity(false);
     this.body.setAcceleration(0, 0);
     this.body.setDrag(0, 0);
-    this.body.setVelocity(0, 0);
+    // Keep whatever upward momentum she arrived with and bleed it off in the
+    // climb below. Zeroing it here would eat any jump made alongside a wall —
+    // she would catch it an inch off the floor and stop dead.
+    this.body.setVelocity(0, Math.min(0, this.body.velocity.y));
     this.setFlipX(side === 'right'); // cling art is drawn wall-left
     this.scene.events.emit('player-cling', this);
     sfx.play('cling');
@@ -305,9 +316,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
           }
           break;
         }
-        // auto-cling
-        if (b.blocked.left && this.canCling('left', now)) { this.enterCling('left', now); break; }
-        if (b.blocked.right && this.canCling('right', now)) { this.enterCling('right', now); break; }
+        // Auto-grab on contact. Steering away from a wall is a refusal to grab
+        // it, which is what lets a player skim past one instead of being caught
+        // by it, and what makes releasing a wall stay released while held.
+        if (b.blocked.left && !this.held('right') && this.canCling('left', now)) {
+          this.enterCling('left', now); break;
+        }
+        if (b.blocked.right && !this.held('left') && this.canCling('right', now)) {
+          this.enterCling('right', now); break;
+        }
 
         this.setFrame(b.velocity.y < 0 ? this.frameIndex.jump[0] : this.frameIndex.fall[0]);
         this.anims.stop();
@@ -326,8 +343,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
           this.wallJump(now);
           break;
         }
-        // hold-to-cling: releasing the into-wall direction lets go
-        if (!this.held(side)) {
+        // Letting go is deliberate: steer away from the wall. Releasing the
+        // stick no longer drops her, so standing still on a wall is stable and
+        // the player can line up a jump without falling off mid-thought.
+        if (this.held(this.awayFrom(side))) {
+          // Lock this side out briefly, or she is still touching the wall on
+          // the next frame and the auto-grab below puts her straight back on.
+          this.restickSide = side;
+          this.restickUntil = now + T.RESTICK_LOCK_MS;
           this.exitClingToAir(now); // wall coyote window still allows a late wall-jump
           break;
         }
@@ -356,7 +379,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         b.setVelocityX(side === 'left' ? -T.CLING_PUSH : T.CLING_PUSH);
         if (up) b.setVelocityY(-T.CLIMB_UP);
         else if (down) b.setVelocityY(T.CLIMB_DOWN);
-        else b.setVelocityY(0);
+        else if (b.velocity.y < 0) {
+          // Carried-in upward momentum drags to a halt rather than stopping on
+          // the spot, so catching a wall mid-jump reads as a slide, not a wall.
+          b.setVelocityY(Math.min(0, b.velocity.y + T.CLING_RISE_DRAG * (delta / 1000)));
+        } else b.setVelocityY(0);
 
         // reached the floor while climbing down
         if (b.blocked.down && down) {
