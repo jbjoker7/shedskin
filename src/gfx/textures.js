@@ -98,6 +98,23 @@ export function makeGradient(scene, key, w, h, stops) {
   return tex;
 }
 
+// Mid-layer parallax silhouette: dark pipes and girders, tileable.
+export function makeBgMid(scene, key, colors) {
+  const size = 96;
+  const tex = scene.textures.createCanvas(key, size, size);
+  const ctx = tex.getContext();
+  ctx.fillStyle = colors.pipe;
+  ctx.fillRect(14, 0, 5, size);   // vertical pipe
+  ctx.fillRect(70, 0, 3, size);   // thin conduit
+  ctx.fillStyle = colors.girder;
+  ctx.fillRect(0, 30, size, 6);   // girder
+  ctx.fillRect(0, 78, size, 4);
+  ctx.fillStyle = colors.pipe;
+  ctx.fillRect(38, 52, 22, 16);   // duct box
+  tex.refresh();
+  return tex;
+}
+
 // Dithered dark noise tile for parallax texture.
 export function makeNoise(scene, key, size, colors, density = 0.12) {
   const tex = scene.textures.createCanvas(key, size, size);

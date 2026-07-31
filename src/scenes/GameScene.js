@@ -59,6 +59,8 @@ export class GameScene extends Phaser.Scene {
     this.bgFar = this.add.image(bx, by, key).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.BG_FAR);
     this.bgNoise = this.add.tileSprite(bx, by, VIEW_W, VIEW_H, 'bg-noise')
       .setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.BG_MID).setAlpha(0.35);
+    this.bgMid = this.add.tileSprite(bx, by, VIEW_W, VIEW_H, 'bg-mid')
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.BG_MID).setAlpha(0.8);
 
     // --- player + tail ---
     this.player = new Player(this, parsed.spawn.x, parsed.spawn.y, this.levelLayer);
@@ -127,6 +129,13 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-R', () => {
       if (this.state === 'playing') this.doRestart();
     });
+    // pause (UIScene keeps running and shows the card + handles resume)
+    this.input.keyboard.on('keydown-ESC', () => {
+      if (this.state === 'playing') {
+        this.scene.pause();
+        this.game.events.emit('game-paused');
+      }
+    });
 
     // UI overlay scene
     if (!this.scene.isActive('UI')) this.scene.launch('UI');
@@ -163,6 +172,7 @@ export class GameScene extends Phaser.Scene {
     // parallax
     const cam = this.cameras.main;
     this.bgNoise.tilePositionY = cam.scrollY * 0.15;
+    this.bgMid.tilePositionY = cam.scrollY * 0.45;
 
     // camera scout peek (hold Up). followOffset is SUBTRACTED from the target:
     // larger offset.y = camera centers higher above the player.

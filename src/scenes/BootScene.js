@@ -1,7 +1,7 @@
 // Generates every texture and animation in the game (a few ms of canvas
 // painting — no loading bar needed), then hands off to Title or a ?level= jump.
 import Phaser from 'phaser';
-import { makeTexture, makeSheet, makeTiles, makeNoise } from '../gfx/textures.js';
+import { makeTexture, makeSheet, makeTiles, makeNoise, makeBgMid } from '../gfx/textures.js';
 import * as ART from '../gfx/sprites.js';
 import { P } from '../gfx/palette.js';
 import { sfx } from '../audio/sfx.js';
@@ -30,6 +30,7 @@ export class BootScene extends Phaser.Scene {
     makeTexture(this, 'jar', ART.JAR, ART.PROP_PALETTE);
     makeTiles(this, 'tiles', ART.TILES, ART.TILE_PALETTE);
     makeNoise(this, 'bg-noise', 64, [P.SHADOW, P.STEEL], 0.1);
+    makeBgMid(this, 'bg-mid', { pipe: '#141a21', girder: '#10151b' });
 
     // 1x1 white pixel for particles/flashes
     const px = this.textures.createCanvas('px', 1, 1);

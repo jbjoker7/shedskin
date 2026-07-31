@@ -24,7 +24,7 @@ export class UIScene extends Phaser.Scene {
     this.collectorPip = this.add.rectangle(barX, barTop + barH, 10, 4, 0xe23b2e).setVisible(false);
     this.barTop = barTop; this.barH = barH;
 
-    this.muteText = this.add.text(14, GAME_H - 24, 'M mute · R restart', {
+    this.muteText = this.add.text(14, GAME_H - 24, 'M mute · R restart · ESC pause', {
       fontFamily: FONT, fontSize: '12px', color: '#5c6e7d',
     });
 
@@ -49,17 +49,31 @@ export class UIScene extends Phaser.Scene {
     };
     this.onCollector = () => this.flashText('THE COLLECTOR IS COMING. CLIMB.');
 
+    this.onPaused = () => {
+      this.makeCard(0.7);
+      this.text(GAME_W / 2, GAME_H / 2 - 10, 'PAUSED', 34);
+      this.text(GAME_W / 2, GAME_H / 2 + 40, 'ESC to resume', 14, '#5c6e7d');
+    };
+    this.input.keyboard.on('keydown-ESC', () => {
+      if (this.scene.isPaused('Game')) {
+        this.clearCard();
+        this.scene.resume('Game');
+      }
+    });
+
     g.on('level-start', this.onLevelStart);
     g.on('tail-lost', this.onTailLost);
     g.on('level-complete', this.onLevelComplete);
     g.on('hud-progress', this.onProgress);
     g.on('collector-triggered', this.onCollector);
+    g.on('game-paused', this.onPaused);
     this.events.once('shutdown', () => {
       g.off('level-start', this.onLevelStart);
       g.off('tail-lost', this.onTailLost);
       g.off('level-complete', this.onLevelComplete);
       g.off('hud-progress', this.onProgress);
       g.off('collector-triggered', this.onCollector);
+      g.off('game-paused', this.onPaused);
     });
   }
 
