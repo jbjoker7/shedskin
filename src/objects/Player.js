@@ -69,9 +69,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   // Tail anchor point (world coords) — where the follower tail attaches.
   tailAnchor() {
-    if (this.pstate === PSTATE.CLING_LEFT) return { x: this.x + 3, y: this.y + 10 };
-    if (this.pstate === PSTATE.CLING_RIGHT) return { x: this.x - 3, y: this.y + 10 };
-    return { x: this.x - this.facing * 8, y: this.y + 6 };
+    if (this.pstate === PSTATE.CLING_LEFT) return { x: this.x - 1, y: this.y + 9 };
+    if (this.pstate === PSTATE.CLING_RIGHT) return { x: this.x + 1, y: this.y + 9 };
+    return { x: this.x - this.facing * 7, y: this.y + 7 };
+  }
+
+  // Unit vector the tail hangs along when the player isn't moving: straight
+  // down on a wall, trailing behind (and slightly down) on the ground/in air.
+  tailRestDir() {
+    if (this.pstate === PSTATE.CLING_LEFT || this.pstate === PSTATE.CLING_RIGHT) {
+      return { x: 0, y: 1 };
+    }
+    const len = Math.hypot(1, 0.35);
+    return { x: -this.facing / len, y: 0.35 / len };
   }
 
   // The tile beside the body on `side`, or null (world edge / open air).

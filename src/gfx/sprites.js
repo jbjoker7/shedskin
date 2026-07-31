@@ -39,27 +39,43 @@ const WALK = [
 const JUMP = pad24([...H_BODY, '...G.G...G.G....', BLANK16]);
 const FALL = pad24([...H_BODY, '.G..G....G..G...', 'G............G..']);
 
-// Vertical cling column (head up, wall at left). Leg rows reach x=0.
-const vRow = (art) => art + _(16 - art.length);
-const clingFrames = (legOffset) => {
-  const rows = [];
-  rows.push(vRow('..GG'));
-  rows.push(vRow('.GGGG'));
-  rows.push(vRow('.GEGG'));
-  rows.push(vRow('..GGG'));
-  for (let y = 4; y < 22; y++) {
-    const legPhase = (y + legOffset) % 5 === 0 && y < 17;
-    if (legPhase) rows.push(vRow('G.GGGD'));
-    else if (y < 16) rows.push(vRow('..GGGD'));
-    else if (y < 19) rows.push(vRow('..GGG'));
-    else rows.push(vRow('...GG'));
-  }
-  rows.push(vRow('...G'));
-  rows.push(BLANK16);
-  return rows;
-};
-const CLING = clingFrames(1);
-const CLIMB = [clingFrames(1), clingFrames(3)];
+// Vertical cling pose: head up, splayed on a wall to the LEFT (flipX for the
+// right wall). The physics body spans frame x=3..13, so the wall face sits at
+// x=3 — the gripping toes reach there. Legs alternate to animate the climb.
+// `front`/`back` are the two 2-row leg bands (upper and lower limb pairs).
+const clingPose = (front, back) => [
+  BLANK16,
+  BLANK16,
+  '...GGGG.........',
+  '..GGGGGG........',
+  '..GGEGGG........',
+  '..GGGGGG........',
+  '...GGGG.........',
+  '..GGGGGG........',
+  front[0],
+  front[1],
+  '...GGGGG........',
+  '...GGGGG........',
+  '...GGGGG........',
+  '...GGGGG........',
+  '..GGGGGG........',
+  back[0],
+  back[1],
+  '...GGGG.........',
+  '...GDGG.........',
+  '...GDGG.........',
+  '....DGG.........',
+  '....DG..........',
+  BLANK16,
+  BLANK16,
+];
+// limb bands: reaching (toes splayed wide) vs tucked
+const REACH_UP = ['.GGGGGGGGG......', '.G..GGGG..G.....'];
+const TUCKED   = ['..GGGGGGG.......', '..G.GGGG.G......'];
+const REACH_DN = ['.GGGGGGGGG......', '.G.GGGGG...G....'];
+
+const CLING = clingPose(TUCKED, TUCKED);
+const CLIMB = [clingPose(REACH_UP, TUCKED), clingPose(TUCKED, REACH_DN)];
 
 export const GECKO = {
   palette: GECKO_PALETTE,
