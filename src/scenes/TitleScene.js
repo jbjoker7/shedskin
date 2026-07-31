@@ -25,8 +25,8 @@ export class TitleScene extends Phaser.Scene {
         }
       },
     });
-    this.add.sprite(GAME_W / 2 - 140, GAME_H - 90, 'caged-lizard', 0).setScale(3).setAlpha(0.5);
-    this.add.sprite(GAME_W / 2 + 150, GAME_H - 90, 'jar', 0).setScale(3).setAlpha(0.6);
+    this.add.sprite(GAME_W / 2 - 160, 130, 'caged-lizard', 0).setScale(3).setAlpha(0.5);
+    this.add.sprite(GAME_W / 2 + 160, 130, 'jar', 0).setScale(3).setAlpha(0.6);
 
     this.add.text(GAME_W / 2, 210, 'KEEP YOUR TAIL', {
       fontFamily: FONT, fontSize: '54px', color: '#5cb85c', fontStyle: 'bold',
